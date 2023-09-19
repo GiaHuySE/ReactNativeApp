@@ -28,7 +28,7 @@ const CustomDarkModal: React.FC<CustomModalProps> = ({ isVisible = false,
                     <Text style={styles.modalContent}>{content}</Text>
                     <View style={styles.btnContain}>
                         <CustomButton title={firstBtnTitle} type='clear' buttonStyle={{ width: 150, height: 50 }} textStyle={{ color: '#0071F7' }} onPress={firstBtnOnPress} />
-                        <CustomButton title={secondBtnTitle} type='solid' buttonStyle={{ width: 100, height: 50, right: 20 }} onPress={secondBtnOnPress} />
+                        <CustomButton title={secondBtnTitle} type='solid' buttonStyle={{ width: 100, height: 50, right: 20 }} textStyle={{ color: 'white' }} onPress={secondBtnOnPress} />
                     </View>
                 </View>
             </View>

@@ -72,15 +72,7 @@ export const SignIn = ({}) => {
           validationSchema={loginValidationSchema}
           initialValues={{email: '', password: ''}}
           onSubmit={() => {}}>
-          {({
-            handleChange,
-            handleBlur,
-            handleSubmit,
-            values,
-            errors,
-            isValid,
-            touched,
-          }) => (
+          {({handleChange, handleBlur, errors, isValid, touched}) => (
             <>
               <View style={{flexDirection: 'column', marginVertical: 15}}>
                 <AppInput

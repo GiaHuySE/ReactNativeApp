@@ -141,21 +141,28 @@ const App: React.FC = () => {
             style={{flex: 1, backgroundColor: theme.colorScheme.background}}>
             <NavigationContainer>
               <Stack.Navigator screenOptions={{headerShown: false}}>
-                {!state.userToken ? (
-                  <Stack.Screen name="SignIn" component={SignIn} />
-                ) : (
-                  <Stack.Screen name="Home" component={Home} />
-                )}
                 <Stack.Screen
                   name="LockPassCode"
                   component={LockPassCode}></Stack.Screen>
-                <Stack.Screen name="SignUp" component={SignUp} />
-                <Stack.Screen name="ResetPassword" component={ResetPassword} />
-                <Stack.Screen name="Verify" component={Verify} />
-                <Stack.Screen
-                  name="ForgotPassword"
-                  component={ForgotPassword}
-                />
+                {!state.userToken ? (
+                  <>
+                    <Stack.Screen name="SignIn" component={SignIn} />
+                    <Stack.Screen name="SignUp" component={SignUp} />
+                  </>
+                ) : (
+                  <>
+                    <Stack.Screen name="Home" component={Home} />
+                    <Stack.Screen
+                      name="ResetPassword"
+                      component={ResetPassword}
+                    />
+                    <Stack.Screen name="Verify" component={Verify} />
+                    <Stack.Screen
+                      name="ForgotPassword"
+                      component={ForgotPassword}
+                    />
+                  </>
+                )}
               </Stack.Navigator>
             </NavigationContainer>
           </View>

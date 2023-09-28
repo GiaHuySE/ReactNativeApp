@@ -1,88 +1,188 @@
-/**
- * Sample React Native App
- * https://github.com/facebook/react-native
- *
- * @format
- */
-
-import React, { useState } from 'react';
-import type { PropsWithChildren } from 'react';
+import 'react-native-gesture-handler';
+import React, {useEffect, useState, useReducer, useMemo} from 'react';
+import type {PropsWithChildren} from 'react';
+import {View} from 'react-native';
+import * as SecureStore from 'expo-secure-store';
+import {createNativeStackNavigator} from '@react-navigation/native-stack';
+import {StackActions, useNavigation} from '@react-navigation/native';
+import {NavigationContainer} from '@react-navigation/native';
 import {
-  StyleSheet,
-  View,
-  ActivityIndicator
-} from 'react-native';
-
-import {
-  Colors,
-  DebugInstructions,
-  Header,
-  LearnMoreLinks,
-  ReloadInstructions,
-} from 'react-native/Libraries/NewAppScreen';
-import CustomButton from './AppButton/CustomButton';
-import { CustomInput } from './AppInputText/CustomInput';
-import useTheme from './CustomHook/useTheme';
-import CustomText from './AppText/CustomText';
-import CustomHeader from './AppHeader/CustomHeader';
-import CustomHomeHeader from './AppHeader/CustomHomeHeader';
-import CustomStatusBar from './AppStatuBar/CustomStatusBar';
-import CustomLightModal from './AppPopUp/CustomLightModal';
-import CustomDarkModal from './AppPopUp/CustomDarkModal';
-import CustomLoader from './AppLoader/CustomLoader';
+  ThemeProvider,
+  Verify,
+  SignUp,
+  SignIn,
+  ForgotPassword,
+  Home,
+  LoaderContext,
+  LockPassCode,
+  ResetPassword,
+} from './components';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 type SectionProps = PropsWithChildren<{
   title: string;
 }>;
 
+import {useSetupTheme} from './hooks';
 
+export type RootStackParamList = {
+  SignIn: undefined;
+  SignUp: undefined;
+  ForgotPassword: undefined;
+  Verify: undefined;
+  ResetPassword: undefined;
+  Home: undefined;
+  LockPassCode: undefined;
+};
 
-function App(): JSX.Element {
-  const { isDarkMode, colorScheme, toggle } = useTheme(false);
-  const onPress = () => {
-    toggle();
+// Define the state type
+type AuthState = {
+  isLoading: boolean;
+  isSignout: boolean;
+  userToken: string | null;
+};
+
+// Define action types and action creators
+type AuthAction =
+  | {type: 'RESTORE_TOKEN'; token: string | null}
+  | {type: 'SIGN_IN'; token: string}
+  | {type: 'SIGN_OUT'};
+
+type AuthContextType = {
+  signIn: (data: any) => void; // Replace 'any' with your actual data type
+  signOut: () => void;
+  signUp: (data: any) => void; // Replace 'any' with your actual data type
+};
+
+// Define the initial state
+const initialState: AuthState = {
+  isLoading: true,
+  isSignout: false,
+  userToken: null,
+};
+
+const authReducer = (prevState: AuthState, action: AuthAction): AuthState => {
+  switch (action.type) {
+    case 'RESTORE_TOKEN':
+      return {
+        ...prevState,
+        userToken: action.token,
+        isLoading: false,
+      };
+    case 'SIGN_IN':
+      return {
+        ...prevState,
+        isSignout: false,
+        userToken: action.token,
+      };
+    case 'SIGN_OUT':
+      return {
+        ...prevState,
+        isSignout: true,
+        userToken: null,
+      };
+    default:
+      return prevState;
   }
+};
+export const AuthContext = React.createContext<AuthContextType | undefined>(
+  undefined,
+);
 
-  const [modalVisible, setModalVisible] = useState(false);
-  const openModal = () => {
-    setModalVisible(true);
-  }
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
-  const closeModal = () => {
-    setModalVisible(false);
-  }
-  return (
-    <View style={[styles.container, { backgroundColor: colorScheme.background }]}>
-      <CustomStatusBar statusColor={colorScheme.background} statusStyle={isDarkMode ? 'light-content' : 'dark-content'} />
-      <CustomHomeHeader avatar={require('./assets/avatar.png')} title='Header title' textStyle={{ color: colorScheme.onBackground }}
-        headerStyle={{ backgroundColor: colorScheme.background }} iconStyle={{ tintColor: colorScheme.onBackground }} />
-      <CustomText children='Hello World' type='h1' style={{ color: colorScheme.onBackground, fontFamily: 'Montserrat-SemiBold', textAlign: 'center' }} />
-      <CustomInput placeholderTextColor={colorScheme.onBackground} title='Name' borderColor={colorScheme.onBackground}
-        customTextStyle={{ color: colorScheme.onBackground }} customTextInputStyle={{ color: colorScheme.onBackground }} />
-      <CustomButton onPress={onPress} title='Change theme' type='outline' buttonStyle={{ alignSelf: 'center', backgroundColor: colorScheme.background, marginTop: 10 }}
-        textStyle={{ color: colorScheme.onBackground }} />
-      <CustomButton onPress={openModal} title='Open modal' type='solid' buttonStyle={{ alignSelf: 'center', marginTop: 10 }}
-        textStyle={{ color: colorScheme.onBackground }} />
-      <CustomLightModal isVisible={modalVisible} title='This is title' content='This is content' firstBtnTitle='Exit' secondBtnTitle='Ok' firstBtnOnPress={closeModal}
-        secondBtnOnPress={() => console.log('ok')} />
-      <CustomLoader visible={false} loaderColor={colorScheme.onBackground} style={{ backgroundColor: colorScheme.background }} />
+const App: React.FC = () => {
+  const theme = useSetupTheme(false);
 
-      {!isDarkMode ? <CustomLightModal isVisible={modalVisible} title='This is title' content='This is content' firstBtnTitle='Exit' secondBtnTitle='Ok' firstBtnOnPress={closeModal}
-        secondBtnOnPress={() => console.log('ok')} /> : <CustomDarkModal isVisible={modalVisible} title='This is title' content='This is content' firstBtnTitle='Exit' secondBtnTitle='Ok' firstBtnOnPress={closeModal}
-          secondBtnOnPress={() => console.log('ok')} />}
-    </View>
+  const [state, dispatch] = useReducer(authReducer, initialState);
+
+  useEffect(() => {
+    // Fetch the token from storage then navigate to our appropriate place
+    const bootstrapAsync = async () => {
+      let userToken;
+
+      try {
+        userToken = await AsyncStorage.getItem('logged-in');
+      } catch (e) {
+        // Restoring token failed
+      }
+
+      // After restoring token, we may need to validate it in production apps
+
+      // This will switch to the App screen or Auth screen and this loading
+      // screen will be unmounted and thrown away.
+      dispatch({type: 'RESTORE_TOKEN', token: userToken as any});
+    };
+
+    bootstrapAsync();
+  }, []);
+
+  const authContext = useMemo(
+    () => ({
+      signIn: async (data: any) => {
+        // In a production app, we need to send some data (usually username, password) to server and get a token
+        // We will also need to handle errors if sign in failed
+        // After getting token, we need to persist the token using `SecureStore`
+        // In the example, we'll use a dummy token
+        let userToken;
+
+        try {
+          userToken = await AsyncStorage.getItem('logged-in');
+          console.log(userToken);
+        } catch (e) {
+          // Restoring token failed
+        }
+
+        dispatch({type: 'SIGN_IN', token: userToken as string});
+      },
+      signOut: () => dispatch({type: 'SIGN_OUT'}),
+      signUp: async (data: any) => {
+        // In a production app, we need to send user data to server and get a token
+        // We will also need to handle errors if sign up failed
+        // After getting token, we need to persist the token using `SecureStore`
+        // In the example, we'll use a dummy token
+        let userToken;
+
+        try {
+          userToken = await AsyncStorage.getItem('logged-in');
+          console.log(userToken);
+        } catch (e) {
+          // Restoring token failed
+        }
+        dispatch({type: 'SIGN_IN', token: userToken as string});
+      },
+    }),
+    [],
   );
-}
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  button: {
-    padding: 10,
-    borderRadius: 10,
-    marginVertical: 5,
-    width: '100%'
-  }
-});
+  return (
+    <ThemeProvider value={theme}>
+      <AuthContext.Provider value={authContext}>
+        <LoaderContext>
+          <View
+            style={{flex: 1, backgroundColor: theme.colorScheme.background}}>
+            <NavigationContainer>
+              <Stack.Navigator screenOptions={{headerShown: false}}>
+                {!state.userToken ? (
+                  <Stack.Screen name="SignIn" component={SignIn} />
+                ) : (
+                  <Stack.Screen name="Home" component={Home} />
+                )}
+                <Stack.Screen
+                  name="LockPassCode"
+                  component={LockPassCode}></Stack.Screen>
+                <Stack.Screen name="SignUp" component={SignUp} />
+                <Stack.Screen name="ResetPassword" component={ResetPassword} />
+                <Stack.Screen name="Verify" component={Verify} />
+                <Stack.Screen
+                  name="ForgotPassword"
+                  component={ForgotPassword}
+                />
+              </Stack.Navigator>
+            </NavigationContainer>
+          </View>
+        </LoaderContext>
+      </AuthContext.Provider>
+    </ThemeProvider>
+  );
+};
 
 export default App;
